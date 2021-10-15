@@ -1,15 +1,43 @@
-import React, { useState } from "react";
-import { View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { useTheme } from "@emotion/react";
+import { ScrollView } from "react-native";
 import { TextInputMask } from "react-native-masked-text";
 import PageTitle from "ui/components/data-display/PageTitle/PageTitle";
 import TextInput from "ui/components/inputs/TextInput/TextInput";
 import Button from "ui/components/inputs/Button/Button";
 import UserInformation from "ui/components/data-display/UserInformation/UserInformation";
+import {
+  ErrorText,
+  FormContainer,
+  ResponseContainer,
+  TextContainer,
+} from "ui/styles/pages/encontrar-diarista.style";
+import useIndex from "data/hooks/pages/useIndex.page";
+import useEncontrarDiarista from "data/hooks/pages/useEncontrarDiarista.page.mobile";
 
 const EncontrarDiaristas: React.FC = () => {
-  const [cep, setCep] = useState("");
+  const { colors } = useTheme();
+  const {
+      cep,
+      setCep,
+      cepValido,
+      buscarProfissionais,
+      erro,
+      diaristas,
+      buscaFeita,
+      carregando,
+      diaristasRestantes,
+    } = useIndex(),
+    { cepAutomatico } = useEncontrarDiarista();
+
+  useEffect(() => {
+    if (cepAutomatico && !cep) {
+      setCep(cepAutomatico);
+      buscarProfissionais(cepAutomatico)
+    }
+  }, [cepAutomatico]);
   return (
-    <View>
+    <ScrollView>
       <PageTitle
         title={"Conheça os profissionais"}
         subtitle={
@@ -17,30 +45,61 @@ const EncontrarDiaristas: React.FC = () => {
         }
       />
 
-      <TextInputMask
-        value={cep}
-        onChangeText={setCep}
-        type={"custom"}
-        options={{
-          mask: "99.999-999",
-        }}
-        customTextInput={TextInput}
-        customTextInputProps={{
-          label: "Digite seu CEP",
-        }}
-      />
+      <FormContainer>
+        <TextInputMask
+          value={cep}
+          onChangeText={setCep}
+          type={"custom"}
+          options={{
+            mask: "99.999-999",
+          }}
+          customTextInput={TextInput}
+          customTextInputProps={{
+            label: "Digite seu CEP",
+          }}
+        />
 
-      <Button mode={"contained"} style={{ marginTop: 32 }}>
-        Buscar
-      </Button>
+        {erro ? <ErrorText>{erro}</ErrorText> : null}
 
-      <UserInformation 
-      name={'Wslmacieira'}
-      rating={3}
-      picture={'https://github.com/akirahanashiro.png'}
-      description={'São Paulo'}
-      />
-    </View>
+        <Button
+          mode={"contained"}
+          style={{ marginTop: 32 }}
+          color={colors.accent}
+          disabled={!cepValido || carregando}
+          onPress={() => buscarProfissionais(cep)}
+          loading={carregando}
+        >
+          Buscar
+        </Button>
+      </FormContainer>
+
+      {buscaFeita &&
+        (diaristas.length > 0 ? (
+          <ResponseContainer>
+            {diaristas.map((item, index) => (
+              <UserInformation
+                key={index}
+                name={item.nome_completo}
+                rating={item.reputacao || 0}
+                picture={item.foto_usuario || ""}
+                description={item.cidade}
+                darker={index % 2 === 1}
+              />
+            ))}
+
+            {diaristasRestantes > 0 && (
+              <TextContainer>
+                ...e mais {diaristasRestantes} profissionais atendem ao seu
+                endereço.
+              </TextContainer>
+            )}
+          </ResponseContainer>
+        ) : (
+          <TextContainer>
+            Ainda não temos nenhuma diarista disponível em sua região
+          </TextContainer>
+        ))}
+    </ScrollView>
   );
 };
 
